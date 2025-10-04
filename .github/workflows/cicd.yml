@@ -13,7 +13,7 @@ jobs:
       mysql: # This service starts a temporary MySQL database
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_ROOT_PASSWORD: 12345687
           MYSQL_DATABASE: userdb   # <-- UPDATED FROM testdb
         ports:
           - 3308:3306
@@ -40,7 +40,7 @@ jobs:
       env: # These variables tell your application how to connect to the database
         SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/userdb   # <-- UPDATED FROM testdb
         SPRING_DATASOURCE_USERNAME: root
-        SPRING_DATASOURCE_PASSWORD: ""
+        SPRING_DATASOURCE_PASSWORD: root
 
   dependency-submission:
 
