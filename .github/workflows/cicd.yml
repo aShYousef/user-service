@@ -1,4 +1,4 @@
-name: Java CI with Gradle
+name: Java CI/CD with Gradle and Docker
 
 on:
   push:
@@ -6,11 +6,15 @@ on:
   pull_request:
     branches: [ "master" ]
 
+# Define the image name as an environment variable for easy reuse
+env:
+  IMAGE_NAME: ayousef21/user-service
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grants permission for dependency submission
+      contents: write
 
     services:
       mysql: # Creates a temporary MySQL database for testing
@@ -23,20 +27,47 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-    - name: Check out repository
-      uses: actions/checkout@v4
+      # --- 1. Build and Test Phase ---
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Build with Gradle
-      run: ./gradlew build
-      env: # Passes the correct database credentials to your tests
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/userdb
-        SPRING_DATASOURCE_USERNAME: root
-        SPRING_DATASOURCE_PASSWORD: password
-
+      - name: Build with Gradle
+        run: ./gradlew build
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/userdb
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: password
+      
+      # --- 2. Docker Login and Push Phase ---
+      # This section runs only after the build and tests succeed.
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          
+      - name: Build and push Docker image
+        # This step will only run on pushes to the master branch
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
     
