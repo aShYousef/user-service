@@ -7,19 +7,22 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build: # All logic is now inside this single 'build' job
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Grants permission for dependency submission
+
     services:
-      mysql:
+      mysql: # Creates a temporary MySQL database for testing
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: password
           MYSQL_DATABASE: userdb
         ports:
-          - 3306:3306 # The database is available on port 3306
+          - 3308:3306 # Makes the database available on port 3308
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
-    steps: # All steps are now correctly placed under the 'build' job
+    steps:
     - name: Check out repository
       uses: actions/checkout@v4
 
@@ -31,9 +34,8 @@ jobs:
 
     - name: Build with Gradle
       run: ./gradlew build
-      env:
-        # NOTE: The port is 3306 to match the 'ports' definition above
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/userdb
+      env: # Passes the correct database credentials to your tests
+        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/userdb
         SPRING_DATASOURCE_USERNAME: root
         SPRING_DATASOURCE_PASSWORD: password
 
