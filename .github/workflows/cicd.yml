@@ -7,7 +7,7 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
+  build: # All logic is now inside this single 'build' job
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -16,18 +16,15 @@ jobs:
           MYSQL_ROOT_PASSWORD: password
           MYSQL_DATABASE: userdb
         ports:
-          - 3306:3306
+          - 3306:3306 # The database is available on port 3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
-  dependency-submission:
+    steps: # All steps are now correctly placed under the 'build' job
+    - name: Check out repository
+      uses: actions/checkout@v4
 
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-java@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
@@ -35,11 +32,10 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
       env:
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/userdb
+        # NOTE: The port is 3306 to match the 'ports' definition above
+        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/userdb
         SPRING_DATASOURCE_USERNAME: root
         SPRING_DATASOURCE_PASSWORD: password
 
-    # Generates and submits a dependency graph, enabling Dependabot Alerts for all project dependencies.
-    # See: https://github.com/gradle/actions/blob/main/dependency-submission/README.md
     - name: Generate and submit dependency graph
       uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
